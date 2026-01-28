@@ -3,11 +3,14 @@ import { ScriptEditor } from './editor';
 import { Sidebar } from './components/Sidebar';
 import { ExportModal } from './components/ExportModal';
 import { NewProjectModal } from './components/NewProjectModal';
+import { AuthModal } from './components/AuthModal';
+import { ShareModal } from './components/ShareModal';
 import { PropListView } from './modules/proplist';
 import { ShotlistView } from './modules/shotlist';
 import { useProjectStore } from './store/projectStore';
 import { useThemeStore } from './store/themeStore';
 import { useAppStore } from './store/appStore';
+import { useAuthStore } from './store/authStore';
 import './App.css';
 
 // Icons as components
@@ -45,6 +48,35 @@ function MenuIcon() {
   );
 }
 
+function UserIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  );
+}
+
+function CloudIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+    </svg>
+  );
+}
+
 const MODE_LABELS = {
   writing: 'Writing',
   proplist: 'Prop List',
@@ -54,6 +86,7 @@ const MODE_LABELS = {
 function App() {
   const {
     projects,
+    sharedProjects,
     currentProject,
     createProject,
     openProject,
@@ -62,17 +95,36 @@ function App() {
     deleteProject,
     duplicateProject,
     saveProject,
-    isDirty
+    isDirty,
+    isSyncing,
+    fetchFromCloud,
+    saveToCloud,
+    deleteFromCloud,
   } = useProjectStore();
 
+  const { user, profile, isLoading: authLoading, initialize: initAuth, signOut } = useAuthStore();
   const { resolvedTheme, setTheme } = useThemeStore();
   const { sidebarOpen, toggleSidebar, setSidebarOpen, activeMode, setActiveMode } = useAppStore();
 
   const [showProjectBrowser, setShowProjectBrowser] = useState(!currentProject);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [shareModalProject, setShareModalProject] = useState<{ id: string; title: string } | null>(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [exportModal, setExportModal] = useState<'props' | 'shots' | 'script' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  // Fetch projects from cloud when user logs in
+  useEffect(() => {
+    if (user) {
+      fetchFromCloud(user.id);
+    }
+  }, [user, fetchFromCloud]);
 
   // Apply theme on mount
   useEffect(() => {
@@ -94,23 +146,32 @@ function App() {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
-  // Auto-save effect
+  // Auto-save effect (local + cloud)
   useEffect(() => {
     if (isDirty && currentProject) {
       setIsSaving(true);
       const timer = setTimeout(() => {
         saveProject();
+        // Also save to cloud if logged in
+        if (user && currentProject) {
+          saveToCloud(currentProject, user.id);
+        }
         setIsSaving(false);
-      }, 5000); // Auto-save after 5 seconds of inactivity
+      }, 3000); // Reduced to 3 seconds for better UX
 
       return () => clearTimeout(timer);
     }
-  }, [isDirty, currentProject, saveProject]);
+  }, [isDirty, currentProject, saveProject, user, saveToCloud]);
 
-  const handleCreateProject = (title: string, author: string, email: string) => {
-    createProject(title, author, email);
+  const handleCreateProject = async (title: string, author: string, email: string) => {
+    const newProject = createProject(title, author, email);
     setIsNewProjectModalOpen(false);
     setShowProjectBrowser(false);
+
+    // Immediately sync to cloud if logged in
+    if (user) {
+      await saveToCloud(newProject, user.id);
+    }
   };
 
   const handleDuplicateProject = (id: string, e: React.MouseEvent) => {
@@ -129,14 +190,33 @@ function App() {
     setActiveMode('writing');
   };
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this project?')) {
       deleteProject(id);
+      if (user) {
+        await deleteFromCloud(id);
+      }
     }
   };
 
-  // Export PDF moved to ExportModal component
+  const handleSignOut = async () => {
+    await signOut();
+    setShowProjectBrowser(true);
+  };
+
+  // All projects combined (owned + shared)
+  const allProjects = [...projects, ...sharedProjects];
+
+  // Show loading screen while auth initializes
+  if (authLoading) {
+    return (
+      <div className="app loading-screen">
+        <div className="loading-spinner" />
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   // Project Browser View
   if (showProjectBrowser) {
@@ -144,19 +224,41 @@ function App() {
       <div className="app">
         <div className="project-browser">
           <header className="project-browser-header">
-            <button
-              className="theme-toggle"
-              onClick={toggleTheme}
-              title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
-              aria-label="Toggle theme"
-            >
-              {resolvedTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
-            </button>
+            <div className="header-auth-section">
+              {user ? (
+                <div className="user-menu">
+                  <span className="user-email">{profile?.display_name || user.email}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={handleSignOut}>
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  <UserIcon /> Sign In
+                </button>
+              )}
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+                aria-label="Toggle theme"
+              >
+                {resolvedTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+            </div>
 
             <div className="logo">
               <h1>Slate</h1>
             </div>
             <p className="tagline">Professional Screenwriting Software</p>
+            {isSyncing && (
+              <div className="sync-indicator">
+                <CloudIcon /> Syncing...
+              </div>
+            )}
           </header>
 
           <section className="new-project-section">
@@ -179,20 +281,29 @@ function App() {
             </div>
           </section>
 
-          {projects.length > 0 && (
+          {allProjects.length > 0 && (
             <section className="projects-section">
-              <h2>Recent Projects</h2>
+              <h2>
+                {user ? 'Your Projects' : 'Local Projects'}
+                {!user && <span className="login-hint"> (Sign in to sync across devices)</span>}
+              </h2>
               <div className="projects-grid">
-                {projects
+                {allProjects
                   .filter(p => p.title.toLowerCase().includes(projectSearchQuery.toLowerCase()))
+                  .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
                   .map((project) => (
                     <div
                       key={project.id}
-                      className="project-card"
+                      className={`project-card ${project.isShared ? 'shared' : ''}`}
                       onClick={() => handleOpenProject(project.id)}
                     >
                       <div className="project-card-content">
-                        <h3>{project.title}</h3>
+                        <h3>
+                          {project.title}
+                          {project.isShared && <span className="shared-badge">Shared</span>}
+                          {project.isCloudSynced && !project.isShared && <CloudIcon />}
+                        </h3>
+                        <p className="project-author">{project.author}</p>
                         <p className="project-date">
                           {new Date(project.updatedAt).toLocaleDateString(undefined, {
                             year: 'numeric',
@@ -202,6 +313,19 @@ function App() {
                         </p>
                       </div>
                       <div className="project-card-actions">
+                        {/* Share button - only for owned projects when logged in */}
+                        {user && !project.isShared && (
+                          <button
+                            className="project-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareModalProject({ id: project.id, title: project.title });
+                            }}
+                            title="Share project"
+                          >
+                            <ShareIcon />
+                          </button>
+                        )}
                         <button
                           className="project-action-btn"
                           onClick={(e) => handleDuplicateProject(project.id, e)}
@@ -212,19 +336,37 @@ function App() {
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                           </svg>
                         </button>
-                        <button
-                          className="project-delete-btn"
-                          onClick={(e) => handleDeleteProject(project.id, e)}
-                          title="Delete project"
-                          aria-label="Delete project"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                          </svg>
-                        </button>
+                        {/* Delete only for owned projects */}
+                        {!project.isShared && (
+                          <button
+                            className="project-delete-btn"
+                            onClick={(e) => handleDeleteProject(project.id, e)}
+                            title="Delete project"
+                            aria-label="Delete project"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
+              </div>
+            </section>
+          )}
+
+          {allProjects.length === 0 && (
+            <section className="projects-section empty-state">
+              <div className="empty-state-content">
+                <h3>No projects yet</h3>
+                <p>Create your first screenplay to get started!</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setIsNewProjectModalOpen(true)}
+                >
+                  Create Project
+                </button>
               </div>
             </section>
           )}
@@ -245,11 +387,27 @@ function App() {
             </div>
           </footer>
         </div>
+
         <NewProjectModal
           isOpen={isNewProjectModalOpen}
           onClose={() => setIsNewProjectModalOpen(false)}
           onCreate={handleCreateProject}
         />
+
+        {showAuthModal && (
+          <AuthModal
+            allowClose={true}
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+
+        {shareModalProject && (
+          <ShareModal
+            projectId={shareModalProject.id}
+            projectTitle={shareModalProject.title}
+            onClose={() => setShareModalProject(null)}
+          />
+        )}
       </div>
     );
   }
@@ -303,6 +461,7 @@ function App() {
               onChange={(e) => updateTitle(e.target.value)}
               placeholder="Untitled Screenplay"
             />
+            {currentProject?.isCloudSynced && <CloudIcon />}
             {isDirty && !isSaving && <span className="unsaved-indicator" title="Unsaved changes" />}
             {isSaving && <span className="saving-indicator">Saving...</span>}
           </div>
@@ -311,6 +470,17 @@ function App() {
           </div>
         </div>
         <div className="app-header-right">
+          {/* Share button when in editor */}
+          {user && currentProject && !currentProject.isShared && (
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShareModalProject({ id: currentProject.id, title: currentProject.title })}
+              title="Share project"
+            >
+              <ShareIcon />
+            </button>
+          )}
+
           <button
             className="btn btn-ghost theme-toggle-header"
             onClick={toggleTheme}
@@ -365,6 +535,14 @@ function App() {
         onClose={() => setIsNewProjectModalOpen(false)}
         onCreate={handleCreateProject}
       />
+
+      {shareModalProject && (
+        <ShareModal
+          projectId={shareModalProject.id}
+          projectTitle={shareModalProject.title}
+          onClose={() => setShareModalProject(null)}
+        />
+      )}
     </div>
   );
 }

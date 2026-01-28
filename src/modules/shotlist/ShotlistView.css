@@ -1,0 +1,217 @@
+/* Shotlist Editor */
+.shotlist-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem;
+}
+
+/* Scene Indicator */
+.shotlist-scene-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-primary);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.shotlist-scene-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.shotlist-scene-heading {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+}
+
+/* Quick Add Toolbar */
+.shotlist-toolbar {
+    margin-bottom: 0.75rem;
+}
+
+.shotlist-toolbar-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.shotlist-quickadd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 0.375rem;
+}
+
+.shotlist-quickadd-btn {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Courier Prime', monospace;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.shotlist-quickadd-btn:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* Description Input */
+.shotlist-description-row {
+    margin-bottom: 1rem;
+}
+
+.shotlist-description-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    font-family: inherit;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color-light);
+    border-radius: 6px;
+    color: var(--text-primary);
+    transition: all 0.12s ease;
+}
+
+.shotlist-description-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.shotlist-description-input::placeholder {
+    color: var(--text-placeholder);
+}
+
+/* Shots List */
+.shotlist-items {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.shotlist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    transition: all 0.12s ease;
+}
+
+.shotlist-item:hover {
+    border-color: var(--border-color-light);
+}
+
+.shotlist-item-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.shotlist-item-type {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.shotlist-item-description {
+    flex: 1;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8125rem;
+    font-family: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-primary);
+    transition: all 0.12s ease;
+}
+
+.shotlist-item-description:hover {
+    background: var(--btn-bg);
+}
+
+.shotlist-item-description:focus {
+    outline: none;
+    background: var(--bg-tertiary);
+    border-color: var(--border-color-light);
+}
+
+.shotlist-item-description::placeholder {
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+.shotlist-item-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.12s ease;
+}
+
+.shotlist-item:hover .shotlist-item-delete {
+    opacity: 1;
+}
+
+.shotlist-item-delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Empty State */
+.shotlist-empty,
+.shotlist-no-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.shotlist-hint {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    opacity: 0.7;
+}

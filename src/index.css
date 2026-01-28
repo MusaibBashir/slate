@@ -1,0 +1,557 @@
+/* ========================================
+   SLATE - Design System & Global Styles
+   Professional Screenwriting Software
+   ======================================== */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   CSS Variables - Dark Theme (Default)
+   ======================================== */
+:root,
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #0a0a12;
+  --bg-secondary: #12121c;
+  --bg-tertiary: #1a1a28;
+  --surface-elevated: #1e1e2e;
+  --surface-subtle: rgba(255, 255, 255, 0.03);
+
+  /* Toolbar */
+  --toolbar-bg: #14141f;
+
+  /* Text */
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b0;
+  --text-muted: #606070;
+  --text-placeholder: #4a4a58;
+
+  /* Accent */
+  --accent-primary: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-muted: rgba(99, 102, 241, 0.15);
+
+  /* Buttons */
+  --btn-bg: rgba(255, 255, 255, 0.04);
+  --btn-border: rgba(255, 255, 255, 0.08);
+  --btn-hover-bg: rgba(255, 255, 255, 0.08);
+  --btn-hover-border: rgba(255, 255, 255, 0.15);
+  --btn-active-bg: rgba(99, 102, 241, 0.15);
+  --btn-active-border: rgba(99, 102, 241, 0.4);
+
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-light: rgba(255, 255, 255, 0.12);
+
+  /* Paper/Editor */
+  --paper-bg: #1e1e2e;
+  --paper-text: #f0f0f5;
+  --paper-border: rgba(255, 255, 255, 0.1);
+
+  /* Items */
+  --item-hover-bg: rgba(255, 255, 255, 0.06);
+
+  /* Tags */
+  --tag-bg: rgba(255, 255, 255, 0.08);
+  --tag-text: var(--text-secondary);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+
+  /* States */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+
+  /* Script Item Highlights */
+  --scene-heading-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   CSS Variables - Light Theme
+   ======================================== */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eaeaef;
+  --surface-elevated: #ffffff;
+  --surface-subtle: rgba(0, 0, 0, 0.02);
+
+  /* Toolbar */
+  --toolbar-bg: #ffffff;
+
+  /* Text */
+  --text-primary: #1a1a1f;
+  --text-secondary: #5a5a68;
+  --text-muted: #8a8a98;
+  --text-placeholder: #a0a0a8;
+
+  /* Accent */
+  --accent-primary: #4f46e5;
+  --accent-hover: #6366f1;
+  --accent-muted: rgba(79, 70, 229, 0.1);
+
+  /* Buttons */
+  --btn-bg: rgba(0, 0, 0, 0.03);
+  --btn-border: rgba(0, 0, 0, 0.1);
+  --btn-hover-bg: rgba(0, 0, 0, 0.06);
+  --btn-hover-border: rgba(0, 0, 0, 0.15);
+  --btn-active-bg: rgba(79, 70, 229, 0.1);
+  --btn-active-border: rgba(79, 70, 229, 0.4);
+
+  /* Borders */
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-light: rgba(0, 0, 0, 0.12);
+
+  /* Paper/Editor */
+  --paper-bg: #ffffff;
+  --paper-text: #1a1a1a;
+  --paper-border: rgba(0, 0, 0, 0.1);
+
+  /* Items */
+  --item-hover-bg: rgba(0, 0, 0, 0.04);
+
+  /* Tags */
+  --tag-bg: rgba(0, 0, 0, 0.06);
+  --tag-text: var(--text-secondary);
+
+  /* Tag colors for light mode */
+  --tag-location-bg: rgba(6, 182, 212, 0.12);
+  --tag-location-text: #0891b2;
+  --tag-time-bg: rgba(234, 179, 8, 0.12);
+  --tag-time-text: #ca8a04;
+  --tag-character-bg: rgba(139, 92, 246, 0.12);
+  --tag-character-text: #7c3aed;
+  --tag-transition-bg: rgba(16, 185, 129, 0.12);
+  --tag-transition-text: #059669;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  /* Script Item Highlights */
+  --scene-heading-bg: rgba(0, 0, 0, 0.08);
+}
+
+/* ========================================
+   Reset & Base
+   ======================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ========================================
+   App Layout
+   ======================================== */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+/* ========================================
+   App Header (Editor View)
+   ======================================== */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+}
+
+.project-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-title-input {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0.375rem 0.625rem;
+  border-radius: 4px;
+  min-width: 200px;
+  transition: all 0.15s ease;
+}
+
+.project-title-input:hover {
+  background: var(--btn-bg);
+}
+
+.project-title-input:focus {
+  outline: none;
+  background: var(--btn-bg);
+  border-color: var(--accent-primary);
+}
+
+.unsaved-indicator {
+  width: 8px;
+  height: 8px;
+  background: var(--warning);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.app-main {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn svg {
+  flex-shrink: 0;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  border-color: var(--btn-border);
+}
+
+.btn-secondary:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 0.5rem 0.625rem;
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--btn-bg);
+}
+
+/* ========================================
+   Theme Toggle
+   ======================================== */
+.theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.theme-toggle-header {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================
+   Project Browser
+   ======================================== */
+.project-browser {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 3rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.project-browser-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.logo h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin-top: 0.25rem;
+}
+
+/* New Project Section */
+.new-project-section {
+  margin-bottom: 2.5rem;
+}
+
+.new-project-section h2,
+.projects-section h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.new-project-form {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.new-project-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+.new-project-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.new-project-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+/* Projects Grid */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.project-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.project-card:hover {
+  border-color: var(--accent-primary);
+  background: var(--surface-elevated);
+}
+
+.project-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-card-content h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.project-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.project-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.project-card:hover .project-delete-btn {
+  opacity: 1;
+}
+
+.project-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
+/* Footer / Shortcuts */
+.project-browser-footer {
+  margin-top: auto;
+  padding-top: 3rem;
+}
+
+.shortcuts-info h3 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.shortcut kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem 0.375rem;
+  font-family: 'Courier Prime', monospace;
+  font-size: 0.6875rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 768px) {
+  .project-browser {
+    padding: 2rem 1.25rem;
+  }
+
+  .logo h1 {
+    font-size: 2rem;
+  }
+
+  .new-project-form {
+    flex-direction: column;
+  }
+
+  .shortcuts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .theme-toggle {
+    top: 1rem;
+    right: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header-left span {
+    display: none;
+  }
+
+  .project-title-input {
+    min-width: 120px;
+  }
+}

@@ -1,0 +1,199 @@
+/* Script Viewer Container */
+.script-viewer {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.script-viewer-expanded {
+    padding: 0;
+}
+
+.script-viewer-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.script-viewer-empty p {
+    margin: 0;
+}
+
+.script-viewer-hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem !important;
+}
+
+/* Scene Block - Compact Mode */
+.script-viewer-scene {
+    background: var(--paper-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    overflow: hidden;
+}
+
+.script-viewer-scene:hover {
+    border-color: var(--accent-primary);
+}
+
+.script-viewer-scene.active {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+/* Scene Header */
+.script-viewer-scene-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.script-viewer-scene-number {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.script-viewer-scene.active .script-viewer-scene-number {
+    color: var(--accent-primary);
+}
+
+/* Back Button */
+.script-viewer-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: inherit;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.script-viewer-back-btn:hover {
+    background: var(--btn-hover-bg);
+    color: var(--text-primary);
+}
+
+.script-viewer-back-btn svg {
+    flex-shrink: 0;
+}
+
+/* Scene Content - Compact Mode (truncated) */
+.script-viewer-scene-content {
+    padding: 0.75rem;
+    font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    line-height: 1.4;
+    color: var(--paper-text);
+    max-height: 150px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+}
+
+.script-viewer-scene-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(transparent, var(--paper-bg));
+    pointer-events: none;
+}
+
+/* Scene Content - Expanded Mode (full content) */
+.script-viewer-scene.expanded {
+    border-radius: 0;
+    margin: 0;
+    cursor: default;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.script-viewer-scene.expanded .script-viewer-scene-header {
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.script-viewer-scene-content.expanded {
+    max-height: none;
+    overflow-y: auto;
+    flex: 1;
+    padding: 1rem;
+    cursor: default;
+}
+
+.script-viewer-scene-content.expanded::after {
+    display: none;
+}
+
+/* Screenplay element styles within viewer */
+.script-viewer-scene-content .script-element {
+    margin-bottom: 0.5em;
+}
+
+.script-viewer-scene-content [data-type="scene-heading"] {
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+.script-viewer-scene-content [data-type="character"] {
+    text-transform: uppercase;
+    text-align: center;
+    margin-left: 1.5in;
+    font-size: 10pt;
+}
+
+.script-viewer-scene-content [data-type="dialogue"] {
+    margin-left: 1in;
+    margin-right: 1in;
+    font-size: 10pt;
+}
+
+.script-viewer-scene-content [data-type="parenthetical"] {
+    margin-left: 1.25in;
+    margin-right: 1in;
+    font-style: italic;
+    font-size: 10pt;
+}
+
+.script-viewer-scene-content [data-type="transition"] {
+    text-align: right;
+    text-transform: uppercase;
+    font-size: 10pt;
+}
+
+/* Expanded mode specific text sizing */
+.script-viewer-scene-content.expanded [data-type="scene-heading"],
+.script-viewer-scene-content.expanded [data-type="character"],
+.script-viewer-scene-content.expanded [data-type="dialogue"],
+.script-viewer-scene-content.expanded [data-type="parenthetical"],
+.script-viewer-scene-content.expanded [data-type="transition"],
+.script-viewer-scene-content.expanded [data-type="action"] {
+    font-size: 11pt;
+}

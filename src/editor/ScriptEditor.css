@@ -344,3 +344,92 @@
 .script-editor-wrapper.continuous-mode .page-break {
   display: none;
 }
+
+/* ========== Collaboration Styles ========== */
+
+/* Collaborators presence bar */
+.collaborators-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.collaborators-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.collaborator-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: default;
+}
+
+/* Collaboration cursor styles */
+.collaboration-cursor__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  word-break: normal;
+  border-left: 2px solid;
+}
+
+.collaboration-cursor__label {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  font-size: 10px;
+  font-weight: 600;
+  font-style: normal;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 3px 3px 3px 0;
+  transform: translateY(-2px);
+  color: white;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Remote cursor selection highlight */
+.ProseMirror .selection-decoration {
+  background: rgba(255, 255, 0, 0.3);
+}
+
+/* Live indicator pulse */
+@keyframes cursor-blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.collaboration-cursor__caret::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: inherit;
+  animation: cursor-blink 1.2s ease-in-out infinite;
+}

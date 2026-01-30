@@ -153,8 +153,12 @@ function App() {
       const timer = setTimeout(() => {
         saveProject();
         // Also save to cloud if logged in
-        if (user && currentProject) {
-          saveToCloud(currentProject, user.id);
+        // Get fresh state to ensure we have the latest content
+        if (user) {
+          const freshProject = useProjectStore.getState().currentProject;
+          if (freshProject) {
+            saveToCloud(freshProject, user.id);
+          }
         }
         setIsSaving(false);
       }, 3000); // Reduced to 3 seconds for better UX

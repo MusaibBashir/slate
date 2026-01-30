@@ -1,0 +1,140 @@
+/* Floating Toolbar - Fixed at bottom of editor */
+.floating-toolbar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.floating-toolbar-inner {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    border-radius: 8px;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        0 1px 3px rgba(0, 0, 0, 0.08);
+    pointer-events: auto;
+}
+
+/* Toolbar Button */
+.floating-toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary, #666);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.floating-toolbar-btn:hover:not(:disabled) {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    color: var(--text-primary, #1a1a1a);
+}
+
+.floating-toolbar-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.floating-toolbar-btn.active {
+    background: var(--accent-bg, rgba(99, 102, 241, 0.12));
+    color: var(--accent-primary, #6366f1);
+}
+
+.floating-toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.floating-toolbar-btn svg {
+    display: block;
+}
+
+.floating-toolbar-btn strong {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.floating-toolbar-btn em {
+    font-style: italic;
+    font-size: 15px;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* Text icon (Aa) */
+.floating-toolbar-text-icon {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+/* Divider */
+.floating-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color, rgba(0, 0, 0, 0.12));
+    margin: 0 4px;
+}
+
+/* Light theme adjustments (default) */
+:root {
+    --floating-toolbar-bg: #ffffff;
+    --floating-toolbar-border: rgba(0, 0, 0, 0.1);
+    --floating-toolbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark theme support */
+[data-theme="dark"] .floating-toolbar-inner,
+.dark .floating-toolbar-inner {
+    background: var(--bg-secondary, #2a2a2a);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .floating-toolbar-btn,
+.dark .floating-toolbar-btn {
+    color: var(--text-secondary, #a0a0a0);
+}
+
+[data-theme="dark"] .floating-toolbar-btn:hover:not(:disabled),
+.dark .floating-toolbar-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary, #ffffff);
+}
+
+/* Responsive - Hide on very small screens */
+@media (max-width: 400px) {
+    .floating-toolbar-inner {
+        padding: 6px 8px;
+        gap: 2px;
+    }
+
+    .floating-toolbar-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .floating-toolbar-divider {
+        margin: 0 2px;
+    }
+}
+
+/* Print - Hide toolbar */
+@media print {
+    .floating-toolbar {
+        display: none;
+    }
+}

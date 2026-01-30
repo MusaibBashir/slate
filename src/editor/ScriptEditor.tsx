@@ -1,8 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import * as Y from 'yjs';
 import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
     PageBreak,
 } from './extensions';
 import { Toolbar } from './Toolbar';
+import { FloatingToolbar } from './FloatingToolbar';
 import { Autocomplete } from './Autocomplete';
 import { TitlePage } from '../components/TitlePage';
 import { useProjectStore } from '../store/projectStore';
@@ -44,8 +45,8 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
     // Create Yjs document
     const ydoc = useMemo(() => new Y.Doc(), [currentProject?.id]);
 
-    // Supabase provider for real-time sync
-    const providerRef = useRef<SupabaseProvider | null>(null);
+    // Supabase provider for real-time sync (using state to trigger re-render when provider is ready)
+    const [provider, setProvider] = useState<SupabaseProvider | null>(null);
 
     // User color for cursor (stored in session)
     const userColor = useMemo(() => {
@@ -62,26 +63,29 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
     // Initialize Supabase provider for real-time sync
     useEffect(() => {
         if (!isCollaborative || !user || !currentProject) {
+            setProvider(null);
             return;
         }
 
         // Create provider
-        providerRef.current = new SupabaseProvider(ydoc, {
+        const newProvider = new SupabaseProvider(ydoc, {
             projectId: currentProject.id,
             userId: user.id,
             userName: profile?.display_name || user.email || 'Anonymous',
             userColor,
         });
+        setProvider(newProvider);
 
         // Listen for awareness changes
-        const unsubscribe = providerRef.current.onAwarenessChange((states) => {
+        const unsubscribe = newProvider.onAwarenessChange((states) => {
             const collabs: CollaboratorPresence[] = [];
             states.forEach((state, id) => {
                 if (id !== user.id) {
                     collabs.push({
                         userId: id,
-                        userName: state.userName || 'Anonymous',
-                        userColor: state.userColor || '#888',
+                        // Handle both snake_case (from presence) and camelCase (from awareness broadcast)
+                        userName: state.userName || state.user_name || 'Anonymous',
+                        userColor: state.userColor || state.user_color || '#888',
                         cursor: state.cursor,
                     });
                 }
@@ -91,8 +95,8 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
 
         return () => {
             unsubscribe();
-            providerRef.current?.destroy();
-            providerRef.current = null;
+            newProvider.destroy();
+            setProvider(null);
         };
     }, [isCollaborative, user, currentProject?.id, userColor, profile, ydoc]);
 
@@ -122,26 +126,20 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
             Transition,
             Shot,
             PageBreak,
+            Underline,
         ];
 
         // Add collaboration extensions if enabled
-        if (isCollaborative && providerRef.current) {
+        if (isCollaborative && provider) {
             baseExtensions.push(
                 Collaboration.configure({
                     document: ydoc,
-                }),
-                CollaborationCursor.configure({
-                    provider: providerRef.current as any,
-                    user: {
-                        name: profile?.display_name || user?.email || 'Anonymous',
-                        color: userColor,
-                    },
                 })
             );
         }
 
         return baseExtensions;
-    }, [isCollaborative, ydoc, userColor, profile, user]);
+    }, [isCollaborative, provider, ydoc]);
 
     const editor = useEditor({
         extensions,
@@ -311,6 +309,9 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
                     <EditorContent editor={editor} />
                 </div>
             </div>
+
+            {/* Floating formatting toolbar */}
+            <FloatingToolbar editor={editor} />
         </div>
     );
 }

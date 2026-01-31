@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ScriptEditor } from './editor';
 import { Sidebar } from './components/Sidebar';
+import { ContentNavigator } from './components/ContentNavigator';
+import { BeatsView } from './components/BeatsView';
 import { ExportModal } from './components/ExportModal';
 import { NewProjectModal } from './components/NewProjectModal';
 import { AuthModal } from './components/AuthModal';
@@ -77,10 +79,12 @@ function CloudIcon() {
   );
 }
 
+type EditorView = 'script' | 'beats' | 'outline';
+
 const MODE_LABELS = {
-  writing: 'Writing',
-  proplist: 'Prop List',
-  shotlist: 'Shotlist',
+  writing: 'Script',
+  proplist: 'Props',
+  shotlist: 'Shots',
 };
 
 function App() {
@@ -113,6 +117,7 @@ function App() {
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [exportModal, setExportModal] = useState<'props' | 'shots' | 'script' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [editorView, setEditorView] = useState<EditorView>('script');
 
   // Initialize auth on mount
   useEffect(() => {
@@ -418,9 +423,19 @@ function App() {
 
   // Render active module
   const renderModule = () => {
+    // For writing mode, respect editorView (Script/Beats/Outline)
+    if (activeMode === 'writing') {
+      switch (editorView) {
+        case 'beats':
+          return <BeatsView />;
+        case 'outline':
+          return <BeatsView />; // Outline uses same view for now
+        default:
+          return <ScriptEditor />;
+      }
+    }
+
     switch (activeMode) {
-      case 'writing':
-        return <ScriptEditor />;
       case 'proplist':
         return <PropListView />;
       case 'shotlist':
@@ -432,10 +447,11 @@ function App() {
 
   // Editor View with Modules
   return (
-    <div className="app">
+    <div className="app app-with-sidebar">
       <Sidebar />
 
-      <header className="app-header">
+      {/* Arc Studio Pro Style Header */}
+      <header className="app-header arc-header">
         <div className="app-header-left">
           <button
             className="btn btn-ghost hamburger-btn"
@@ -454,9 +470,7 @@ function App() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            <span className="btn-label-desktop">Projects</span>
           </button>
-          <div className="header-divider" />
           <div className="project-title-wrapper">
             <input
               type="text"
@@ -469,12 +483,43 @@ function App() {
             {isDirty && !isSaving && <span className="unsaved-indicator" title="Unsaved changes" />}
             {isSaving && <span className="saving-indicator">Saving...</span>}
           </div>
-          <div className="mode-indicator">
+        </div>
+
+        {/* Centered View Tabs (Script | Beats | Outline) */}
+        {activeMode === 'writing' && (
+          <div className="app-header-center">
+            <nav className="view-tabs">
+              <button
+                className={`view-tab ${editorView === 'script' ? 'active' : ''}`}
+                onClick={() => setEditorView('script')}
+              >
+                Script
+              </button>
+              <button
+                className={`view-tab ${editorView === 'beats' ? 'active' : ''}`}
+                onClick={() => setEditorView('beats')}
+              >
+                Beats
+              </button>
+              <button
+                className={`view-tab ${editorView === 'outline' ? 'active' : ''}`}
+                onClick={() => setEditorView('outline')}
+              >
+                Outline
+              </button>
+            </nav>
+          </div>
+        )}
+
+        {/* Mode indicator for non-writing modes */}
+        {activeMode !== 'writing' && (
+          <div className="app-header-center">
             <span className="mode-badge">{MODE_LABELS[activeMode]}</span>
           </div>
-        </div>
+        )}
+
         <div className="app-header-right">
-          {/* Share button when in editor */}
+          {/* Share button */}
           {user && currentProject && !currentProject.isShared && (
             <button
               className="btn btn-ghost"
@@ -494,37 +539,36 @@ function App() {
             {resolvedTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
 
-          {/* Export buttons - show based on mode */}
-          {activeMode === 'proplist' && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => setExportModal('props')}
-            >
-              Export Props
-            </button>
-          )}
-          {activeMode === 'shotlist' && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => setExportModal('shots')}
-            >
-              Export Shots
-            </button>
-          )}
-          {activeMode === 'writing' && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => setExportModal('script')}
-            >
-              Export Script
-            </button>
-          )}
+          {/* Save button */}
+          <button
+            className="btn btn-ghost"
+            onClick={() => saveProject()}
+            title="Save project"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+          </button>
+
+          {/* Export button */}
+          <button
+            className="btn btn-secondary"
+            onClick={() => setExportModal(activeMode === 'proplist' ? 'props' : activeMode === 'shotlist' ? 'shots' : 'script')}
+          >
+            Export
+          </button>
         </div>
       </header>
 
-      <main className="app-main">
-        {renderModule()}
-      </main>
+      {/* Main Content Area with Sidebar */}
+      <div className="app-body">
+        {/* Content Navigator Sidebar - only show in writing mode with script view */}
+        {activeMode === 'writing' && editorView === 'script' && <ContentNavigator />}
+
+        <main className="app-main">{renderModule()}</main>
+      </div>
 
       {/* Export Modal */}
       {exportModal && (
@@ -552,3 +596,4 @@ function App() {
 }
 
 export default App;
+

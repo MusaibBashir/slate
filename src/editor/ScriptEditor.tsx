@@ -143,7 +143,7 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
 
     const editor = useEditor({
         extensions,
-        content: isCollaborative ? undefined : (currentProject?.content || ''),
+        content: currentProject?.content || '',
         onUpdate: ({ editor }) => {
             const content = editor.getHTML();
             updateContent(content);

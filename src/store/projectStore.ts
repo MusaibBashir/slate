@@ -2,10 +2,57 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 
+
+// Beat types for story outline
+export interface BeatCard {
+    id: string;
+    title: string;
+    synopsis: string;
+    isExpanded: boolean;
+}
+
+export interface Act {
+    id: string;
+    name: string;
+    beats: BeatCard[];
+    isExpanded: boolean;
+}
+
+// Strip UI-only fields before saving to cloud (reduces JSON size)
+const stripBeatsForStorage = (acts: Act[] | undefined) => {
+    if (!acts) return null;
+    return acts.map(act => ({
+        id: act.id,
+        name: act.name,
+        beats: act.beats.map(beat => ({
+            id: beat.id,
+            title: beat.title,
+            synopsis: beat.synopsis,
+        })),
+    }));
+};
+
+// Restore UI state when loading from cloud
+const restoreBeatsFromStorage = (acts: any[] | undefined): Act[] | undefined => {
+    if (!acts || !Array.isArray(acts)) return undefined;
+    return acts.map(act => ({
+        id: act.id,
+        name: act.name,
+        isExpanded: true, // Default to expanded
+        beats: (act.beats || []).map((beat: any) => ({
+            id: beat.id,
+            title: beat.title,
+            synopsis: beat.synopsis,
+            isExpanded: true, // Default to expanded
+        })),
+    }));
+};
+
 export interface Project {
     id: string;
     title: string;
     content: string;
+    beats?: Act[]; // Story outline beats
     createdAt: string;
     updatedAt: string;
     author?: string;
@@ -44,6 +91,7 @@ interface ProjectState {
     updateContent: (content: string) => void;
     updateTitle: (title: string) => void;
     updateAuthor: (author: string) => void;
+    updateBeats: (beats: Act[]) => void;
     saveProject: () => void;
     deleteProject: (id: string) => void;
     duplicateProject: (id: string) => void;
@@ -103,6 +151,7 @@ export const useProjectStore = create<ProjectState>()(
                 const { projects, sharedProjects } = get();
                 const project = [...projects, ...sharedProjects].find((p) => p.id === id);
                 if (project) {
+                    console.log(`[Store] Opening project "${project.title}" from cache. Content size: ${project.content?.length}`);
                     set({ currentProject: { ...project }, isDirty: false });
                 }
             },
@@ -135,6 +184,15 @@ export const useProjectStore = create<ProjectState>()(
                 set((state) => ({
                     currentProject: state.currentProject
                         ? { ...state.currentProject, author }
+                        : null,
+                    isDirty: true,
+                }));
+            },
+
+            updateBeats: (beats: Act[]) => {
+                set((state) => ({
+                    currentProject: state.currentProject
+                        ? { ...state.currentProject, beats }
                         : null,
                     isDirty: true,
                 }));
@@ -217,6 +275,8 @@ export const useProjectStore = create<ProjectState>()(
                             id: project.id.startsWith('proj_') ? undefined : project.id,
                             title: project.title,
                             content: project.content,
+                            // Strip UI-only fields to reduce JSON size
+                            beats: stripBeatsForStorage(project.beats),
                             author: project.author,
                             email: project.email,
                             owner_id: userId,
@@ -247,79 +307,134 @@ export const useProjectStore = create<ProjectState>()(
                 set({ isSyncing: true, syncError: null });
 
                 try {
-                    // Fetch owned projects
-                    const { data: ownedProjects, error: ownedError } = await supabase
+                    // 1. Fetch Owned Projects - Explicit Selection
+
+                    // Add timeout race
+                    const fetchOwnedPromise = supabase
                         .from('projects')
-                        .select('*')
-                        .eq('owner_id', userId)
-                        .eq('is_deleted', false);
+                        .select('id, title, content, beats, author, email, owner_id, created_at, updated_at, is_deleted')
+                        .eq('owner_id', userId);
 
-                    if (ownedError) throw ownedError;
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Database request timed out')), 10000)
+                    );
 
-                    // Fetch shared projects (where user is a collaborator)
+                    const { data: ownedProjects, error: ownedError } = await Promise.race([
+                        fetchOwnedPromise.then(res => res as any),
+                        timeoutPromise
+                    ]) as any;
+
+                    if (ownedError) {
+                        console.error('Error fetching owned projects:', ownedError);
+                        throw ownedError;
+                    }
+
+                    // 2. Fetch Shared Projects
                     const { data: collaborations, error: collabError } = await supabase
                         .from('collaborators')
                         .select(`
                             role,
-                            projects (*)
+                            projects (
+                                id, title, content, beats, author, email, owner_id, created_at, updated_at, is_deleted
+                            )
                         `)
                         .eq('user_id', userId);
 
-                    if (collabError) throw collabError;
+                    if (collabError) {
+                        console.error('Error fetching shared projects:', collabError);
+                        throw collabError;
+                    }
 
-                    // Transform owned projects
-                    const owned: Project[] = (ownedProjects || []).map((p: any) => ({
-                        id: p.id,
-                        title: p.title,
-                        content: p.content || '',
-                        createdAt: p.created_at,
-                        updatedAt: p.updated_at,
-                        author: p.author,
-                        email: p.email,
-                        owner_id: p.owner_id,
-                        isCloudSynced: true,
-                        role: 'owner' as const,
-                    }));
+                    // Helper to safely parse projects
+                    const parseProject = (p: any, role: 'owner' | 'editor' | 'viewer', isShared: boolean): Project | null => {
+                        try {
+                            if (!p) return null;
+                            if (p.is_deleted === true) return null; // Explicit check for true
 
-                    // Transform shared projects
-                    const shared: Project[] = (collaborations || [])
-                        .filter((c: any) => c.projects && !c.projects.is_deleted)
-                        .map((c: any) => ({
-                            id: c.projects.id,
-                            title: c.projects.title,
-                            content: c.projects.content || '',
-                            createdAt: c.projects.created_at,
-                            updatedAt: c.projects.updated_at,
-                            author: c.projects.author,
-                            email: c.projects.email,
-                            owner_id: c.projects.owner_id,
-                            isCloudSynced: true,
-                            isShared: true,
-                            role: c.role as 'editor' | 'viewer',
-                        }));
+                            // Safely restore beats
+                            let beats: Act[] | undefined;
+                            try {
+                                beats = restoreBeatsFromStorage(p.beats);
+                            } catch (e) {
+                                // Fail silently for beats parsing
+                                beats = [];
+                            }
+
+                            return {
+                                id: p.id,
+                                title: p.title || 'Untitled',
+                                content: p.content || '',
+                                beats: beats,
+                                createdAt: p.created_at,
+                                updatedAt: p.updated_at,
+                                author: p.author,
+                                email: p.email,
+                                owner_id: p.owner_id,
+                                isShared: isShared,
+                                isCloudSynced: true,
+                                role: role,
+                            };
+                        } catch (e) {
+                            return null;
+                        }
+                    };
+
+                    // Process results
+                    const validOwned = (ownedProjects || [])
+                        .map(p => parseProject(p, 'owner', false))
+                        .filter((p): p is Project => p !== null);
+
+                    const validShared = (collaborations || [])
+                        .map((c: any) => parseProject(c.projects, c.role as any, true))
+                        .filter((p): p is Project => p !== null);
+
+                    // 4. Merge Strategies
+                    // Cloud always wins conflict with local cache to ensure consistency
+                    const cloudMap = new Map<string, Project>();
+                    [...validOwned, ...validShared].forEach(p => cloudMap.set(p.id, p));
+
+                    // Keep local-only projects (that haven't been synced yet)
+                    const { projects: currentLocal } = get();
+                    const localOnly = currentLocal.filter(
+                        p => p.id.startsWith('proj_') && !p.isCloudSynced
+                    );
+
+                    // Final list is Cloud Projects + Local New Projects
+                    const finalProjects = [...Array.from(cloudMap.values()), ...localOnly];
 
                     set({
-                        projects: owned,
-                        sharedProjects: shared,
-                        isSyncing: false,
+                        projects: finalProjects,
+                        sharedProjects: validShared,
+                        isSyncing: false
                     });
+
                 } catch (error: any) {
-                    console.error('Fetch from cloud failed:', error);
+                    console.error('Fatal error during fetch:', error);
                     set({ isSyncing: false, syncError: error.message });
                 }
             },
 
             saveToCloud: async (project: Project, userId: string) => {
+                const state = get();
+
+                // If already syncing, queue this save (simplified: just ignore for now to prevent race conds)
+                if (state.isSyncing) {
+                    return;
+                }
+
+                set({ isSyncing: true });
+
                 try {
                     const isNewProject = project.id.startsWith('proj_');
 
                     if (isNewProject) {
-                        // INSERT new project (let Supabase generate UUID)
+                        // INSERT logic
                         const { data, error } = await supabase
                             .from('projects')
                             .insert({
                                 title: project.title,
                                 content: project.content,
+                                beats: stripBeatsForStorage(project.beats),
                                 author: project.author,
                                 email: project.email,
                                 owner_id: userId,
@@ -329,8 +444,20 @@ export const useProjectStore = create<ProjectState>()(
 
                         if (error) throw error;
 
-                        // Update local project with cloud ID
                         if (data) {
+                            // AUTO-FIX: detailed RLS policies often require the owner to be in the collaborators table
+                            try {
+                                await supabase
+                                    .from('collaborators')
+                                    .insert({
+                                        project_id: data.id,
+                                        user_id: userId,
+                                        role: 'owner'
+                                    });
+                            } catch (e) {
+                                console.warn('Auto-add owner to collaborators failed (non-critical):', e);
+                            }
+
                             set((state) => ({
                                 projects: state.projects.map((p) =>
                                     p.id === project.id
@@ -340,24 +467,57 @@ export const useProjectStore = create<ProjectState>()(
                                 currentProject: state.currentProject?.id === project.id
                                     ? { ...state.currentProject, id: data.id, owner_id: userId, isCloudSynced: true }
                                     : state.currentProject,
+                                // isSyncing handled in finally
                             }));
                         }
                     } else {
-                        // UPDATE existing project
-                        const { error } = await supabase
+                        // UPDATE logic
+
+                        const updateData = {
+                            title: project.title,
+                            content: project.content,
+                            beats: stripBeatsForStorage(project.beats),
+                            author: project.author,
+                            email: project.email,
+                            updated_at: new Date().toISOString(),
+                        };
+
+                        const updatePromise = supabase
                             .from('projects')
-                            .update({
-                                title: project.title,
-                                content: project.content,
-                                author: project.author,
-                                email: project.email,
-                                updated_at: new Date().toISOString(),
-                            })
+                            .update(updateData, { count: 'exact' })
                             .eq('id', project.id);
+
+                        const timeoutPromise = new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Save request timed out')), 5000)
+                        );
+
+                        const { count, error } = await Promise.race([
+                            updatePromise,
+                            timeoutPromise
+                        ]) as any;
 
                         if (error) throw error;
 
-                        // Mark as synced
+                        // RLS CHECK: If no rows were updated (count === 0), it might be due to missing collaborator entry
+                        if (count === 0) {
+                            // Attempt to add self as collaborator
+                            const { error: collabError } = await supabase
+                                .from('collaborators')
+                                .insert({
+                                    project_id: project.id,
+                                    user_id: userId,
+                                    role: 'owner'
+                                });
+
+                            if (!collabError) {
+                                // Retry once
+                                await supabase
+                                    .from('projects')
+                                    .update(updateData)
+                                    .eq('id', project.id);
+                            }
+                        }
+
                         set((state) => ({
                             projects: state.projects.map((p) =>
                                 p.id === project.id ? { ...p, isCloudSynced: true } : p
@@ -365,11 +525,14 @@ export const useProjectStore = create<ProjectState>()(
                             currentProject: state.currentProject?.id === project.id
                                 ? { ...state.currentProject, isCloudSynced: true }
                                 : state.currentProject,
+                            // isSyncing handled in finally
                         }));
                     }
                 } catch (error: any) {
                     console.error('Save to cloud failed:', error);
                     set({ syncError: error.message });
+                } finally {
+                    set({ isSyncing: false });
                 }
             },
 

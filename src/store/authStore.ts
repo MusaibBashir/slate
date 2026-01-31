@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface Profile {
@@ -35,18 +36,63 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     initialize: async () => {
         try {
-            // Get initial session
-            const { data: { session }, error } = await supabase.auth.getSession();
 
-            if (error) throw error;
+            // Helper to get session with timeout and fallback
+            const getSessionRobust = async () => {
+                try {
+                    // Try standard client first with short timeout
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Auth timeout')), 2000)
+                    );
+
+                    const sessionPromise = supabase.auth.getSession();
+                    const result: any = await Promise.race([sessionPromise, timeoutPromise]);
+                    return result.data?.session;
+                } catch (e) {
+                    // Fallback: Read from localStorage directly
+                    try {
+                        const projectUrl = supabaseUrl || '';
+                        // Extract project ref (e.g., https://xyz.supabase.co -> xyz)
+                        const projectRef = projectUrl.split('//')[1]?.split('.')[0];
+
+                        if (projectRef) {
+                            const key = `sb-${projectRef}-auth-token`;
+                            const stored = localStorage.getItem(key);
+                            if (stored) {
+                                const parsed = JSON.parse(stored);
+                                return parsed;
+                            }
+                        }
+                    } catch (readError) {
+                        // ignore manual read error
+                    }
+                    return null;
+                }
+            };
+
+            const session = await getSessionRobust();
 
             if (session?.user) {
                 // Fetch profile
-                const { data: profile } = await supabase
+
+                // Add timeout for profile fetch to prevent infinite loading screen
+                const profilePromise = supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)
                     .single();
+
+                const profileTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                );
+
+                let profile = null;
+                try {
+                    const result: any = await Promise.race([profilePromise, profileTimeout]);
+                    profile = result.data;
+                } catch (e) {
+                    // ignore profile fetch error
+                }
 
                 set({
                     user: session.user,

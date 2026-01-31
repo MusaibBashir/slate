@@ -268,6 +268,22 @@ function App() {
                 <CloudIcon /> Syncing...
               </div>
             )}
+            {!isSyncing && user && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  fetchFromCloud(user.id);
+                }}
+                style={{ marginLeft: '10px' }}
+              >
+                Sync Now
+              </button>
+            )}
+            {user && useProjectStore.getState().syncError && (
+              <div style={{ color: 'red', marginLeft: '10px', fontSize: '0.8rem' }}>
+                Error: {useProjectStore.getState().syncError}
+              </div>
+            )}
           </header>
 
           <section className="new-project-section">

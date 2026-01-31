@@ -9,7 +9,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
     supabaseUrl || 'http://localhost',
-    supabaseAnonKey || 'placeholder'
+    supabaseAnonKey || 'placeholder',
+    {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+        },
+        global: {
+            headers: { 'x-application-name': 'slate' },
+        },
+        db: {
+            schema: 'public',
+        },
+        // Request timeout configuration (if supported by version, otherwise purely client-side handle)
+    }
 );
 
 export default supabase;

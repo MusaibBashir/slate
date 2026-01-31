@@ -36,7 +36,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     initialize: async () => {
         try {
-            console.log('Auth: Initializing...');
 
             // Helper to get session with timeout and fallback
             const getSessionRobust = async () => {
@@ -50,7 +49,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                     const result: any = await Promise.race([sessionPromise, timeoutPromise]);
                     return result.data?.session;
                 } catch (e) {
-                    console.warn('Auth: Standard getSession failed or timed out, trying manual storage read...');
                     // Fallback: Read from localStorage directly
                     try {
                         const projectUrl = supabaseUrl || '';
@@ -62,28 +60,39 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                             const stored = localStorage.getItem(key);
                             if (stored) {
                                 const parsed = JSON.parse(stored);
-                                console.log('Auth: Recovered session from localStorage');
                                 return parsed;
                             }
                         }
                     } catch (readError) {
-                        console.error('Auth: Manual storage read failed:', readError);
+                        // ignore manual read error
                     }
                     return null;
                 }
             };
 
             const session = await getSessionRobust();
-            console.log('Auth: Session resolved:', !!session);
 
             if (session?.user) {
                 // Fetch profile
-                console.log('Auth: Fetching profile...');
-                const { data: profile } = await supabase
+
+                // Add timeout for profile fetch to prevent infinite loading screen
+                const profilePromise = supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)
                     .single();
+
+                const profileTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                );
+
+                let profile = null;
+                try {
+                    const result: any = await Promise.race([profilePromise, profileTimeout]);
+                    profile = result.data;
+                } catch (e) {
+                    // ignore profile fetch error
+                }
 
                 set({
                     user: session.user,

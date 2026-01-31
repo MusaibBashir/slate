@@ -1,7 +1,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
+// Underline import removed
 import Collaboration from '@tiptap/extension-collaboration';
 import * as Y from 'yjs';
 import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
@@ -41,6 +41,17 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
     const editorAreaRef = useRef<HTMLDivElement>(null);
     const [viewMode, setViewMode] = useState<'page' | 'continuous'>('page');
     const [collaborators, setCollaborators] = useState<CollaboratorPresence[]>([]);
+
+    // Safety guard to prevent saving empty content during collaboration init
+    const isReadyRef = useRef(false);
+    // Guard to prevent infinite seeding loops
+    const hasAttemptedSeedingRef = useRef(false);
+
+    // Reset guards when project changes
+    useEffect(() => {
+        isReadyRef.current = false;
+        hasAttemptedSeedingRef.current = false;
+    }, [currentProject?.id]);
 
     // Create Yjs document
     const ydoc = useMemo(() => new Y.Doc(), [currentProject?.id]);
@@ -105,6 +116,8 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
         const baseExtensions: any[] = [
             StarterKit.configure({
                 heading: false,
+                // @ts-ignore - 'history' is valid in StarterKit options but types might be outdated or strict
+                history: isCollaborative ? false : undefined,
             }),
             Placeholder.configure({
                 placeholder: ({ node }) => {
@@ -126,7 +139,6 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
             Transition,
             Shot,
             PageBreak,
-            Underline,
         ];
 
         // Add collaboration extensions if enabled
@@ -145,6 +157,9 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
         extensions,
         content: currentProject?.content || '',
         onUpdate: ({ editor }) => {
+            // Block updates if not ready (prevents overwriting store with empty collab init state)
+            if (!isReadyRef.current) return;
+
             const content = editor.getHTML();
             updateContent(content);
             setDirty(true);
@@ -192,7 +207,6 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
                     try {
                         const pos = view.posAtDOM(child, 0);
                         if (pos >= 0) {
-                            console.log('Auto-paginating at height:', currentHeight + totalNodeHeight);
                             editor.chain().insertContentAt(pos, { type: 'pageBreak' }).run();
                             return;
                         }
@@ -219,20 +233,37 @@ export function ScriptEditor({ className = '' }: ScriptEditorProps) {
 
     // Initialize Yjs doc with existing content (collaborative mode)
     useEffect(() => {
-        if (isCollaborative && currentProject?.content && ydoc) {
-            // Only initialize if doc is empty
+        if (isCollaborative && currentProject?.content && ydoc && editor) {
+            // Stop if we've already handled seeding for this session
+            if (hasAttemptedSeedingRef.current) return;
+
             const fragment = ydoc.getXmlFragment('prosemirror');
-            if (fragment.length === 0 && currentProject.content) {
-                // The editor will handle initial content via Collaboration extension
+            // If Yjs doc is empty but we have database content, seed it
+            if (fragment.toJSON() === '' || fragment.length === 0) {
+                // Fix: setContent expects an object for options, not a boolean
+                // Adding small delay to ensure editor is fully ready to accept content after Collab init
+                setTimeout(() => {
+                    if (editor && !editor.isDestroyed) {
+                        editor.commands.setContent(currentProject.content, { emitUpdate: true });
+                        isReadyRef.current = true; // Ready to save now
+                        hasAttemptedSeedingRef.current = true; // Mark as done
+                    }
+                }, 100);
+            } else {
+                // If Yjs has content, we are ready
+                isReadyRef.current = true;
+                hasAttemptedSeedingRef.current = true; // Mark as done
             }
+        } else if (!isCollaborative) {
+            // Non-collab is always ready immediately
+            isReadyRef.current = true;
         }
-    }, [isCollaborative, currentProject?.content, ydoc]);
+    }, [isCollaborative, currentProject?.content, ydoc, editor]);
 
     const handleSave = useCallback(() => {
         if (editor) {
             const content = editor.getHTML();
             updateContent(content);
-            console.log('Saving project...');
         }
     }, [editor, updateContent]);
 
